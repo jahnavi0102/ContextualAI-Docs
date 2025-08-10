@@ -20,9 +20,10 @@ services:
     name: backend
     env: python
     # IMPORTANT: Specify the root directory if your Django project is in a subdirectory (e.g., 'backend/')
-    repoPath : backend
-    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput"
-    startCommand: "daphne document_management.asgi:application -b 0.0.0.0 -p $PORT"
+    
+    buildCommand: "cd backend && pip install -r requirements.txt && python manage.py collectstatic --noinput"
+    startCommand: "cd backend && daphne document_management.asgi:application -b 0.0.0.0 -p $PORT"
+    
     healthCheckPath: "/admin/login/" # Or any other path that returns 200 OK
     plan: starter # Or higher for production
     numInstances: 1 # Start with 1, scale up as needed
@@ -47,16 +48,16 @@ services:
       - key: GEMINI_API_KEY
         sync: false # Set manually
     # Post-deploy command to run migrations
-    preDeployCommand: "python manage.py migrate"
+    preDeployCommand: "cd backend && python manage.py migrate"
 
   # Django RQ Worker for background tasks
   - type: worker
     name: background_document_management_task
     env: python
     # IMPORTANT: Specify the root directory if your Django project is in a subdirectory (e.g., 'backend/')
-    repoPath : backend
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "python manage.py rqworker default"
+  
+    buildCommand: "cd backend && pip install -r requirements.txt"
+    startCommand: "cd backend && python manage.py rqworker default"
     plan: starter # Or higher
     envVars:
       - key: DATABASE_URL
