@@ -4,7 +4,6 @@ databases:
   # PostgreSQL Database
   - name: document_management_db
     databaseName: document_management
-    user: postgres
 
 services:
   # Django Web Service
