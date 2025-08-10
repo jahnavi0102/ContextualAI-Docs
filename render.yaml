@@ -1,9 +1,10 @@
 # render.yaml - Must be at the root of your repository
 
 databases:
-  # PostgreSQL Database
+  # PostgreSQL Database (Free tier)
   - name: document_management_db
     databaseName: document_management
+    plan: free
 
 services:
   # Django Web Service
@@ -13,7 +14,7 @@ services:
     buildCommand: "cd backend && pip install -r requirements.txt && python manage.py collectstatic --noinput"
     startCommand: "cd backend && daphne document_management.asgi:application -b 0.0.0.0 -p $PORT"
     healthCheckPath: "/admin/login/"
-    plan: starter
+    plan: free
     numInstances: 1
     envVars:
       - key: DATABASE_URL
@@ -40,7 +41,7 @@ services:
     runtime: python
     buildCommand: "cd backend && pip install -r requirements.txt"
     startCommand: "cd backend && python manage.py rqworker default"
-    plan: starter
+    plan: free
     envVars:
       - key: DATABASE_URL
         fromDatabase:
