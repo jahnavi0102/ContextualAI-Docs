@@ -1,3 +1,8 @@
 backend/linenv
 frontend/node_modules/
 backend/.env
+backend/analytics/_pycache_
+backend/chat/_pycache_
+backend/document_management/_pycache_
+backend/documents/_pycache_
+backend/users/_pycache_
