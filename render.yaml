@@ -7,17 +7,6 @@ databases:
     user: postgres
 
 services:
-  # Redis Cache (using Docker)
-  - type: pserv
-    name: document_management_redis
-    runtime: docker
-    image: redis:7-alpine
-    plan: starter
-    disk:
-      name: redis-data
-      mountPath: /data
-      sizeGB: 1
-
   # Django Web Service
   - type: web
     name: backend
@@ -33,7 +22,7 @@ services:
           name: document_management_db
           property: connectionString
       - key: REDIS_URL
-        value: redis://document_management_redis:6379
+        value: "redis://red-d2c5euadbo4c73bcup8g:6379"
       - key: SECRET_KEY
         generateValue: true
       - key: PINECONE_API_KEY
@@ -59,7 +48,7 @@ services:
           name: document_management_db
           property: connectionString
       - key: REDIS_URL
-        value: redis://document_management_redis:6379
+        value: "redis://red-d2c5euadbo4c73bcup8g:6379"
       - key: SECRET_KEY
         generateValue: true
       - key: PINECONE_API_KEY
