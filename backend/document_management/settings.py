@@ -108,7 +108,7 @@ PINECONE_ENVIRONMENT = os.environ.get('PINECONE_ENVIRONMENT')
 PINECONE_INDEX_NAME = os.environ.get('PINECONE_INDEX_NAME')
 
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
-GEMINI_API_BASE_URL = os.environ('GEMINI_API_BASE_URL')
+GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent'
 GEMINI_MODEL_NAME = "gemini-2.0-flash"
 
 MEDIA_URL = '/media/'
