@@ -33,7 +33,6 @@ services:
         value: rag-document-index
       - key: GEMINI_API_KEY
         sync: false
-    preDeployCommand: "cd backend && python manage.py migrate"
 
   # Django RQ Worker
   - type: worker
