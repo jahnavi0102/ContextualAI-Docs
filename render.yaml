@@ -12,7 +12,7 @@ services:
     name: backend
     runtime: python
     buildCommand: "cd backend && pip install -r requirements.txt && python manage.py collectstatic --noinput"
-    startCommand: "cd backend && python manage.py migrate && daphne document_management.asgi:application -b 0.0.0.0 -p $PORT"
+    startCommand: "cd backend && daphne document_management.asgi:application -b 0.0.0.0 -p $PORT"
     healthCheckPath: "/admin/login/"
     plan: free
     numInstances: 1
@@ -22,32 +22,7 @@ services:
           name: document_management_db
           property: connectionString
       - key: REDIS_URL
-        value: "redis://red-d2c5euadbo4c73bcup8g:6379"
-      - key: SECRET_KEY
-        generateValue: true
-      - key: PINECONE_API_KEY
-        sync: false
-      - key: PINECONE_ENVIRONMENT
-        sync: false
-      - key: PINECONE_INDEX_NAME
-        value: rag-document-index
-      - key: GEMINI_API_KEY
-        sync: false
-
-  # Django RQ Worker
-  - type: worker
-    name: background_document_management_task
-    runtime: python
-    buildCommand: "cd backend && pip install -r requirements.txt"
-    startCommand: "cd backend && python manage.py rqworker default"
-    plan: free
-    envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: document_management_db
-          property: connectionString
-      - key: REDIS_URL
-        value: "redis://red-d2c5euadbo4c73bcup8g:6379"
+        value: ""  # Empty for free tier - app will handle gracefully
       - key: SECRET_KEY
         generateValue: true
       - key: PINECONE_API_KEY
