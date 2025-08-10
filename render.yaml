@@ -1,23 +1,27 @@
 # render.yaml - Must be at the root of your repository
 
-services:
+databases:
   # PostgreSQL Database
-  - type: pserv
-    name: document_management_db
-    env: postgres
-    plan: starter
-    # region: oregon
+  - name: document_management_db
+    databaseName: document_management
+    user: postgres
 
-  # Redis Cache
+services:
+  # Redis Cache (using Docker)
   - type: pserv
     name: document_management_redis
-    env: redis
+    runtime: docker
+    image: redis:7-alpine
     plan: starter
+    disk:
+      name: redis-data
+      mountPath: /data
+      sizeGB: 1
 
   # Django Web Service
   - type: web
     name: backend
-    env: python
+    runtime: python
     buildCommand: "cd backend && pip install -r requirements.txt && python manage.py collectstatic --noinput"
     startCommand: "cd backend && daphne document_management.asgi:application -b 0.0.0.0 -p $PORT"
     healthCheckPath: "/admin/login/"
@@ -29,10 +33,7 @@ services:
           name: document_management_db
           property: connectionString
       - key: REDIS_URL
-        fromService:
-          name: document_management_redis
-          property: connectionString
-          type: pserv
+        value: redis://document_management_redis:6379
       - key: SECRET_KEY
         generateValue: true
       - key: PINECONE_API_KEY
@@ -48,7 +49,7 @@ services:
   # Django RQ Worker
   - type: worker
     name: background_document_management_task
-    env: python
+    runtime: python
     buildCommand: "cd backend && pip install -r requirements.txt"
     startCommand: "cd backend && python manage.py rqworker default"
     plan: starter
@@ -58,10 +59,7 @@ services:
           name: document_management_db
           property: connectionString
       - key: REDIS_URL
-        fromService:
-          name: document_management_redis
-          property: connectionString
-          type: pserv
+        value: redis://document_management_redis:6379
       - key: SECRET_KEY
         generateValue: true
       - key: PINECONE_API_KEY
