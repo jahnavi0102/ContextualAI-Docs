@@ -12,7 +12,7 @@ services:
     name: backend
     runtime: python
     buildCommand: "cd backend && pip install -r requirements.txt && python manage.py collectstatic --noinput"
-    startCommand: "cd backend && daphne document_management.asgi:application -b 0.0.0.0 -p $PORT"
+    startCommand: "cd backend && python manage.py migrate && daphne document_management.asgi:application -b 0.0.0.0 -p $PORT"
     healthCheckPath: "/admin/login/"
     plan: free
     numInstances: 1
