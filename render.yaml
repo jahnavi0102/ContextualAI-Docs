@@ -1,21 +1,26 @@
-# render.yaml
+# render.yaml - This file must be at the root of your GitHub repository
+
 services:
   # PostgreSQL Database
   - type: postgres
     name: document_management # This name will be used to generate DATABASE_URL env var
+    # plan: starter # Optional: Uncomment and specify if you want a particular plan
+    # region: us-east-1 # Optional: Uncomment and specify if you want a particular region
 
   # Redis Cache for Channels and RQ
   - type: redis
     name: document_management # This name will be used to generate REDIS_URL env var
     ipAllowlist: [] # Allow all IPs for now (or specify specific service IPs later)
+    # plan: starter # Optional: Uncomment and specify if you want a particular plan
 
   # Django Web Service (Handles HTTP and WebSockets)
   - type: web
     name: backend
     env: python
+    # IMPORTANT: Specify the root directory if your Django project is in a subdirectory (e.g., 'backend/')
+    rootDirectory: backend/ 
     buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput"
     startCommand: "daphne document_management.asgi:application -b 0.0.0.0 -p $PORT"
-    # Or for Gunicorn+Uvicorn: "gunicorn document_management.asgi:application -k uvicorn.workers.UvicornWorker -b 0.0.0.0 -p $PORT"
     healthCheckPath: "/admin/login/" # Or any other path that returns 200 OK
     plan: starter # Or higher for production
     numInstances: 1 # Start with 1, scale up as needed
@@ -46,6 +51,8 @@ services:
   - type: worker
     name: background_document_management_task
     env: python
+    # IMPORTANT: Specify the root directory if your Django project is in a subdirectory (e.g., 'backend/')
+    rootDirectory: backend/ 
     buildCommand: "pip install -r requirements.txt"
     startCommand: "python manage.py rqworker default"
     plan: starter # Or higher
