@@ -32,6 +32,7 @@ services:
         fromService:
           name: document_management_redis
           property: connectionString
+          type: pserv
       - key: SECRET_KEY
         generateValue: true
       - key: PINECONE_API_KEY
@@ -60,6 +61,7 @@ services:
         fromService:
           name: document_management_redis
           property: connectionString
+          type: pserv
       - key: SECRET_KEY
         generateValue: true
       - key: PINECONE_API_KEY
