@@ -20,7 +20,7 @@ services:
     name: backend
     env: python
     # IMPORTANT: Specify the root directory if your Django project is in a subdirectory (e.g., 'backend/')
-    repoPath : backend/ 
+    repoPath : backend
     buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput"
     startCommand: "daphne document_management.asgi:application -b 0.0.0.0 -p $PORT"
     healthCheckPath: "/admin/login/" # Or any other path that returns 200 OK
@@ -54,7 +54,7 @@ services:
     name: background_document_management_task
     env: python
     # IMPORTANT: Specify the root directory if your Django project is in a subdirectory (e.g., 'backend/')
-    repoPath : backend/ 
+    repoPath : backend
     buildCommand: "pip install -r requirements.txt"
     startCommand: "python manage.py rqworker default"
     plan: starter # Or higher
