@@ -9,7 +9,7 @@ interface Document {
   id: number;
   filename: string;
   status: string;
-  uploaded_at: string;
+  created_at: string;
   size: number;
   file: string; // The URL to the actual file
   // Add other fields you expect from your Document model/serializer
@@ -188,7 +188,7 @@ const DocumentLibrary: React.FC<DocumentLibraryProps> = ({ fetchWithAuth }) => {
                       {doc.status}
                     </span>
                   </td>
-                  <td className="py-3 px-4 text-sm text-gray-300">{new Date(doc.uploaded_at).toLocaleDateString()}</td>
+                  <td className="py-3 px-4 text-sm text-gray-300">{new Date(doc.created_at).toLocaleDateString()}</td>
                   <td className="py-3 px-4 text-sm">
                     {doc.file && (
                       <a 

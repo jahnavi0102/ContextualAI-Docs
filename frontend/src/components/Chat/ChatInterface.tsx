@@ -1,5 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { FaPlus, FaPaperPlane, FaSpinner } from 'react-icons/fa'; // Import icons
+import { FaPlus, FaPaperPlane, FaSpinner, FaFileAlt } from 'react-icons/fa'; // Import icons
+
+// Define the structure for a single source citation
+interface SourceCitation {
+  document_id: string;
+  filename: string;
+  chunk_position: number;
+  score: number;
+}
 
 interface ChatInterfaceProps {
   fetchWithAuth: (url: string, options?: RequestInit) => Promise<Response>;
@@ -18,6 +26,8 @@ interface ChatMessage {
   role: 'user' | 'ai';
   content: string;
   timestamp: string;
+  // Updated metadata type: it could be a string (if not parsed by DRF) or an object
+  metadata?: string | { sources?: SourceCitation[] }; 
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ fetchWithAuth, onClose }) => {
@@ -35,6 +45,25 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ fetchWithAuth, onClose })
 
   const messagesEndRef = useRef<HTMLDivElement>(null); // Ref for auto-scrolling
   const ws = useRef<WebSocket | null>(null); // Ref to hold the WebSocket instance
+
+  // Helper function to safely parse metadata
+  const parseMetadata = (metadata: string | { sources?: SourceCitation[] } | undefined): { sources?: SourceCitation[] } => {
+    if (!metadata) return {};
+    
+    if (typeof metadata === 'string') {
+      try {
+        const parsed = JSON.parse(metadata);
+        console.log('Parsed metadata from string:', parsed); // Debug log
+        return parsed;
+      } catch (error) {
+        console.error('Error parsing metadata string:', error, 'Original metadata:', metadata);
+        return {};
+      }
+    }
+    
+    console.log('Metadata already parsed:', metadata); // Debug log
+    return metadata;
+  };
 
   // Function to scroll to the bottom of messages
   const scrollToBottom = () => {
@@ -101,7 +130,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ fetchWithAuth, onClose })
       }
 
       const data: ChatMessage[] = await response.json();
-      setMessages(data);
+      console.log('Raw fetched messages:', data); // Debug log
+      
+      // Ensure metadata is parsed if it comes as a string
+      const parsedData = data.map(msg => {
+        const parsedMetadata = parseMetadata(msg.metadata);
+        console.log(`Message ${msg.id} metadata:`, parsedMetadata); // Debug log
+        return {
+          ...msg,
+          metadata: parsedMetadata
+        };
+      });
+      setMessages(parsedData);
     } catch (err: any) {
       setErrorMessages(err.message);
       console.error("Error fetching messages:", err);
@@ -127,7 +167,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ fetchWithAuth, onClose })
       return;
     }
 
-  
     const accessToken = localStorage.getItem('access_token');
     if (!accessToken) {
       console.warn("No access token found for WebSocket connection. Ensure user is logged in.");
@@ -148,19 +187,29 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ fetchWithAuth, onClose })
 
     ws.current.onmessage = (event) => {
       try {
-        const receivedMessage: ChatMessage = JSON.parse(event.data);
-        console.log(receivedMessage)
-        console.log('WebSocket message received:', receivedMessage);
+        const receivedData = JSON.parse(event.data);
+        console.log('Raw WebSocket message received:', receivedData); // Debug log
+        
+        // The WebSocket message might have a 'message' property containing the actual ChatMessage
+        const receivedMessage: ChatMessage = receivedData.message || receivedData;
+        console.log('Processed WebSocket message:', receivedMessage); // Debug log
 
         setMessages(prev => {
           const exists = prev.some(msg => msg.id === receivedMessage.id);
           if (!exists) {
-            return [...prev, receivedMessage];
+            // Parse metadata if it's a string from WebSocket
+            const parsedMetadata = parseMetadata(receivedMessage.metadata);
+            const processedMessage = {
+              ...receivedMessage,
+              metadata: parsedMetadata
+            };
+            console.log('Adding processed message:', processedMessage); // Debug log
+            return [...prev, processedMessage];
           }
           return prev;
         });
       } catch (error) {
-        console.error("Error parsing WebSocket message:", error);
+        console.error("Error parsing WebSocket message:", error, "Raw data:", event.data);
       }
     };
 
@@ -218,7 +267,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ fetchWithAuth, onClose })
     }
   };
 
- 
+  // --- Send Message ---
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessageContent.trim() || selectedSessionId === null) {
@@ -229,11 +278,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ fetchWithAuth, onClose })
     setSendingMessage(true);
     setSendMessageError(null);
 
-  
     let userMessage: ChatMessage | undefined; 
 
     try {
-      
       userMessage = { 
         id: Date.now(), 
         session: selectedSessionId,
@@ -244,7 +291,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ fetchWithAuth, onClose })
       setMessages(prev => [...prev, userMessage!]); 
       setNewMessageContent('');
 
-    
       const response = await fetchWithAuth(`http://127.0.0.1:8000/api/chat/sessions/${selectedSessionId}/send/`, {
         method: 'POST',
         headers: {
@@ -258,11 +304,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ fetchWithAuth, onClose })
         throw new Error(errorData.error || 'Failed to send message.');
       }
 
-
     } catch (err: any) {
       setSendMessageError(err.message);
       console.error("Error sending message:", err);
-     
       if (userMessage) { 
         setMessages(prev => prev.filter(msg => msg.id !== userMessage!.id)); 
       }
@@ -320,20 +364,69 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ fetchWithAuth, onClose })
           ) : messages.length === 0 ? (
             <div className="flex items-center justify-center h-full text-gray-400">No messages yet. Send your first message!</div>
           ) : (
-            messages.map((message) => (
-              <div
-                key={message.id}
-                className={`mb-4 p-3 rounded-lg max-w-3/4 ${
-                  message.role === 'user' ? 'bg-blue-600 ml-auto' : 'bg-gray-600 mr-auto'
-                }`}
-              >
-                <p className="font-semibold text-sm capitalize mb-1">{message.role === 'user' ? 'You' : 'DocAI'}</p>
-                <p className="text-base">{message.content}</p>
-                <p className="text-xs text-gray-400 text-right mt-1">
-                  {new Date(message.timestamp).toLocaleTimeString()}
-                </p>
-              </div>
-            ))
+            messages.map((message) => {
+              // Safely parse metadata - should already be parsed but double-check
+              const parsedMetadata = parseMetadata(message.metadata);
+              console.log(`Rendering message ${message.id}, metadata:`, parsedMetadata); // Debug log
+
+              return (
+                <div
+                  key={message.id}
+                  className={`mb-4 p-3 rounded-lg max-w-3/4 ${
+                    message.role === 'user' ? 'bg-blue-600 ml-auto' : 'bg-gray-600 mr-auto'
+                  }`}
+                >
+                  <p className="font-semibold text-sm capitalize mb-1">{message.role === 'user' ? 'You' : 'DocAI'}</p>
+                  <p className="text-base whitespace-pre-wrap">{message.content}</p>
+                  <p className="text-xs text-gray-400 text-right mt-1">
+                    {new Date(message.timestamp).toLocaleTimeString()}
+                  </p>
+
+                  {/* --- Source Citations Display --- */}
+                  {message.role === 'ai' && parsedMetadata && parsedMetadata.sources && Array.isArray(parsedMetadata.sources) && parsedMetadata.sources.length > 0 && (
+                    <div className="mt-3 pt-2 border-t border-gray-500 bg-gray-700 rounded-lg p-2">
+                      <div className="flex items-center mb-2">
+                        <FaFileAlt className="mr-2 text-blue-400" />
+                        <p className="font-semibold text-sm text-blue-300">Sources ({parsedMetadata.sources.length}):</p>
+                      </div>
+                      <ul className="space-y-1">
+                        {parsedMetadata.sources.map((source, index) => (
+                          <li key={index} className="text-xs text-gray-300 bg-gray-800 rounded p-2">
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <p className="font-medium text-blue-200">{source.filename}</p>
+                                <p className="text-gray-400">Chunk: {source.chunk_position}</p>
+                              </div>
+                              <div className="text-right ml-2">
+                                <span className={`px-2 py-1 rounded text-xs ${
+                                  source.score > 0.8 ? 'bg-green-600' : 
+                                  source.score > 0.6 ? 'bg-yellow-600' : 'bg-red-600'
+                                }`}>
+                                  {(source.score * 100).toFixed(0)}%
+                                </span>
+                              </div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Debug info - remove this in production */}
+                  {message.role === 'ai' && process.env.NODE_ENV === 'development' && (
+                    <div className="mt-2 text-xs text-gray-500">
+                      <details>
+                        <summary>Debug: Raw Metadata</summary>
+                        <pre className="bg-gray-900 p-2 rounded text-xs overflow-x-auto">
+                          {JSON.stringify(message.metadata, null, 2)}
+                        </pre>
+                      </details>
+                    </div>
+                  )}
+                  {/* --- End Source Citations Display --- */}
+                </div>
+              );
+            })
           )}
           <div ref={messagesEndRef} /> {/* For auto-scrolling */}
         </div>
